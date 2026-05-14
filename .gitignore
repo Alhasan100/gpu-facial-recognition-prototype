@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Generated training data and model artifacts
+dataset/
+datasets/
+data/
+encodings/
+*.pickle
+*.pkl
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.mp4
+*.avi
+
+# Native build and package caches
+build/
+dist/
+*.egg-info/
+vendor_cache/
+
+# Environment-specific configuration
+.env
+.env.*
+*.log
