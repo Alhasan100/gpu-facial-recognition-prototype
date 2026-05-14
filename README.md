@@ -27,11 +27,36 @@ On Windows, Visual Studio Build Tools with the C++ workload is recommended.
 
 ## Installation
 
-Clone the repository, enter the project directory, and create a virtual environment:
+Clone the repository and enter the project directory:
 
 ```powershell
 git clone <repository-url>
 cd gpu-facial-recognition-prototype
+```
+
+### Windows One-Command Setup
+
+Run the installer:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install_windows.ps1
+```
+
+For RTX 40-series GPUs, use compute capability `89`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install_windows.ps1 -CudaArchitectures 89
+```
+
+You can also run `install_windows.cmd` from File Explorer.
+
+The installer creates `.venv`, installs Python dependencies, builds CUDA-enabled dlib, verifies the GPU runtime, and prints the next commands to run.
+
+### Manual Setup
+
+Create and activate a virtual environment:
+
+```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
