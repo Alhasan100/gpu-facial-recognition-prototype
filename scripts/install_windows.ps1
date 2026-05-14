@@ -171,10 +171,24 @@ $verifyCode | Set-Content -Encoding UTF8 -Path $verifyScript
 Invoke-Checked -Executable $python -Arguments @($verifyScript)
 
 Write-Host ""
-Write-Host "Setup is complete." -ForegroundColor Green
+Write-Host "Setup is complete. GPU support was verified successfully." -ForegroundColor Green
 Write-Host ""
-Write-Host "Next commands:"
-Write-Host "  .\.venv\Scripts\Activate.ps1"
-Write-Host "  python .\01_collect_data.py --name person_name"
-Write-Host "  python .\02_train_gpu.py"
-Write-Host "  python .\03_recognize.py --debug"
+Write-Host "Next steps" -ForegroundColor Cyan
+Write-Host "1. Activate the virtual environment:"
+Write-Host "   .\.venv\Scripts\Activate.ps1"
+Write-Host ""
+Write-Host "2. Optional: verify CUDA/dlib again:"
+Write-Host "   python -c `"import dlib; print('DLIB_USE_CUDA:', dlib.DLIB_USE_CUDA); print('CUDA devices:', dlib.cuda.get_num_devices() if dlib.DLIB_USE_CUDA else 0)`""
+Write-Host ""
+Write-Host "3. Collect training images. Replace person_name with the label you want to train:"
+Write-Host "   python .\01_collect_data.py --name person_name"
+Write-Host ""
+Write-Host "4. Train face encodings:"
+Write-Host "   python .\02_train_gpu.py"
+Write-Host ""
+Write-Host "5. Start live recognition:"
+Write-Host "   python .\03_recognize.py --debug"
+Write-Host ""
+Write-Host "Controls"
+Write-Host "  Data collection: press C to capture, Q or Esc to quit."
+Write-Host "  Recognition: press Q or Esc to quit."
