@@ -49,7 +49,7 @@ The Windows installer expects `cmake`, `nvcc`, and Visual Studio C++ Build Tools
 Clone the repository:
 
 ```powershell
-git clone https://github.com/your-account/gpu-facial-recognition-prototype.git
+git clone https://github.com/Alhasan100/gpu-facial-recognition-prototype.git
 cd gpu-facial-recognition-prototype
 ```
 
