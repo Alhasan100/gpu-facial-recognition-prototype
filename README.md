@@ -48,6 +48,26 @@ Install dependencies:
 python -m pip install -r requirements.txt
 ```
 
+On Windows, rebuild dlib with CUDA and cuDNN support:
+
+```powershell
+.\scripts\build_dlib_cuda_windows.ps1
+```
+
+The normal PyPI install can produce a CPU-only dlib build. The build script installs the cuDNN wheel, generates the MSVC import library required for cuDNN, rebuilds dlib from source, and verifies CUDA support at the end.
+
+If PowerShell blocks script execution, run it for the current process with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build_dlib_cuda_windows.ps1
+```
+
+For a specific NVIDIA architecture, pass `-CudaArchitectures`. For example, RTX 40-series GPUs use compute capability `89`:
+
+```powershell
+.\scripts\build_dlib_cuda_windows.ps1 -CudaArchitectures 89
+```
+
 ## GPU Verification
 
 Verify that dlib can see CUDA:
@@ -64,6 +84,12 @@ CUDA devices: 1
 ```
 
 If `DLIB_USE_CUDA` is `False`, dlib was not compiled with CUDA and cuDNN support. Rebuild dlib after confirming CUDA Toolkit, cuDNN, CMake, and the C++ compiler are correctly installed.
+
+On Windows, rerun:
+
+```powershell
+.\scripts\build_dlib_cuda_windows.ps1
+```
 
 ## Workflow
 

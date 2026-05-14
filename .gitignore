@@ -31,6 +31,7 @@ build/
 dist/
 *.egg-info/
 vendor_cache/
+.dlib-cuda-build/
 
 # Environment-specific configuration
 .env
