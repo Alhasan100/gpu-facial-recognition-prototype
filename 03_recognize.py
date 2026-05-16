@@ -10,8 +10,10 @@ from __future__ import annotations
 import argparse
 import os
 import pickle
+import shutil
 import site
 import sys
+import tempfile
 import time
 import warnings
 from pathlib import Path
@@ -39,6 +41,21 @@ def configure_windows_cuda_dll_paths() -> None:
     if os.name != "nt":
         return
 
+    def path_exists(path: Path) -> bool:
+        """
+        Check whether a path exists without failing on restricted Windows folders.
+
+        Args:
+            path (Path): Path to inspect.
+
+        Returns:
+            bool: True when the path exists and is accessible.
+        """
+        try:
+            return path.exists()
+        except OSError:
+            return False
+
     site_package_dirs = {Path(sys.prefix) / "Lib" / "site-packages"}
     site_package_dirs.update(Path(path) for path in site.getsitepackages())
 
@@ -57,7 +74,7 @@ def configure_windows_cuda_dll_paths() -> None:
 
     candidate_dirs.extend(Path(path) for path in os.environ.get("PATH", "").split(os.pathsep) if path)
 
-    existing_dirs = [path for path in candidate_dirs if path.exists()]
+    existing_dirs = [path for path in candidate_dirs if path_exists(path)]
     if existing_dirs:
         os.environ["PATH"] = ";".join(str(path) for path in existing_dirs) + ";" + os.environ.get("PATH", "")
 
@@ -69,6 +86,45 @@ configure_windows_cuda_dll_paths()
 warnings.filterwarnings("ignore", message="pkg_resources is deprecated as an API.*", category=UserWarning)
 
 import dlib  # noqa: E402
+import face_recognition_models  # noqa: E402
+
+
+def configure_face_recognition_model_paths() -> None:
+    """
+    Copy face_recognition model files to an ASCII-safe cache and point imports there.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+    """
+    model_locations = {
+        "pose_predictor_model_location": Path(face_recognition_models.pose_predictor_model_location()),
+        "pose_predictor_five_point_model_location": Path(face_recognition_models.pose_predictor_five_point_model_location()),
+        "cnn_face_detector_model_location": Path(face_recognition_models.cnn_face_detector_model_location()),
+        "face_recognition_model_location": Path(face_recognition_models.face_recognition_model_location()),
+    }
+
+    cache_dir = Path(tempfile.gettempdir()) / "gpu_facial_recognition_models"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    patched_locations = {}
+    for function_name, source_path in model_locations.items():
+        cached_path = cache_dir / source_path.name
+        if not cached_path.exists():
+            shutil.copy2(source_path, cached_path)
+        patched_locations[function_name] = str(cached_path)
+
+    face_recognition_models.pose_predictor_model_location = lambda: patched_locations["pose_predictor_model_location"]
+    face_recognition_models.pose_predictor_five_point_model_location = (
+        lambda: patched_locations["pose_predictor_five_point_model_location"]
+    )
+    face_recognition_models.cnn_face_detector_model_location = lambda: patched_locations["cnn_face_detector_model_location"]
+    face_recognition_models.face_recognition_model_location = lambda: patched_locations["face_recognition_model_location"]
+
+
+configure_face_recognition_model_paths()
 import face_recognition  # noqa: E402
 
 
