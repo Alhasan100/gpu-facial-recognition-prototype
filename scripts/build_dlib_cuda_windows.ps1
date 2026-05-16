@@ -79,6 +79,41 @@ function Add-PathPrefix {
     }
 }
 
+function Install-CudaDllBootstrap {
+    param(
+        [string]$SitePackages,
+        [string]$CudaPath
+    )
+
+    $bootstrapPath = Join-Path $SitePackages "_gpu_facial_recognition_cuda_paths.py"
+    $pthPath = Join-Path $SitePackages "gpu_facial_recognition_cuda_paths.pth"
+    $bootstrapCode = @"
+import os
+from pathlib import Path
+
+
+def _add_cuda_dll_paths():
+    site_packages = Path(__file__).resolve().parent
+    paths = [
+        site_packages / "nvidia" / "cudnn" / "bin",
+        site_packages / "nvidia" / "cu13" / "bin" / "x86_64",
+        Path(r"$CudaPath") / "bin",
+    ]
+    for path in paths:
+        if path.exists():
+            path_text = str(path)
+            os.environ["PATH"] = path_text + os.pathsep + os.environ.get("PATH", "")
+            if hasattr(os, "add_dll_directory"):
+                os.add_dll_directory(path_text)
+
+
+_add_cuda_dll_paths()
+"@
+
+    $bootstrapCode | Set-Content -Encoding UTF8 -Path $bootstrapPath
+    "import _gpu_facial_recognition_cuda_paths" | Set-Content -Encoding ASCII -Path $pthPath
+}
+
 if ($env:OS -ne "Windows_NT") {
     throw "This script is for Windows only."
 }
@@ -115,10 +150,25 @@ Require-Command nvcc
 $vcvarsPath = Get-VcVarsPath
 Write-Host "Visual Studio environment: $vcvarsPath"
 
-$pythonExecutable = Get-PythonValue "import sys; print(sys.executable)"
+$resolvedPython = Get-Command $Python -ErrorAction SilentlyContinue
+if ($resolvedPython -and $resolvedPython.Source) {
+    $pythonExecutable = $resolvedPython.Source
+} elseif (Test-Path $Python) {
+    $pythonExecutable = (Resolve-Path $Python).Path
+} else {
+    $pythonExecutable = Get-PythonValue "import sys; print(sys.executable)"
+}
+
 $pythonPrefix = Get-PythonValue "import sys; print(sys.prefix)"
-$sitePackages = Get-PythonValue "import site, sys; paths=[p for p in site.getsitepackages() if p.lower().endswith('site-packages')]; print(paths[0] if paths else '')"
-if (-not $sitePackages) {
+
+$pythonExecutablePath = [IO.FileInfo]$pythonExecutable
+$scriptsDir = $pythonExecutablePath.Directory
+$possibleVenvRoot = if ($scriptsDir) { $scriptsDir.Parent } else { $null }
+$possibleSitePackages = if ($possibleVenvRoot) { Join-Path $possibleVenvRoot.FullName "Lib\site-packages" } else { "" }
+
+if ($possibleSitePackages -and (Test-Path $possibleSitePackages)) {
+    $sitePackages = $possibleSitePackages
+} else {
     $sitePackages = Get-PythonValue "import sysconfig; print(sysconfig.get_paths()['purelib'])"
 }
 
@@ -172,6 +222,8 @@ if ((Split-Path $env:CUDA_PATH -Leaf) -match 'v(\d+)\.(\d+)') {
 Write-Host "CUDA_PATH: $env:CUDA_PATH"
 Write-Host "cuDNN include: $cudnnInclude"
 Write-Host "cuDNN bin: $cudnnBin"
+
+Install-CudaDllBootstrap -SitePackages $sitePackages -CudaPath $env:CUDA_PATH
 
 $buildRoot = Join-Path ([IO.Path]::GetTempPath()) "dlib-cuda-build"
 $buildId = Get-Date -Format "yyyyMMdd-HHmmss"

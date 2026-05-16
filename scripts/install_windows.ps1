@@ -40,6 +40,41 @@ function Add-PathPrefix {
     }
 }
 
+function Install-CudaDllBootstrap {
+    param(
+        [string]$SitePackages,
+        [string]$CudaPath
+    )
+
+    $bootstrapPath = Join-Path $SitePackages "_gpu_facial_recognition_cuda_paths.py"
+    $pthPath = Join-Path $SitePackages "gpu_facial_recognition_cuda_paths.pth"
+    $bootstrapCode = @"
+import os
+from pathlib import Path
+
+
+def _add_cuda_dll_paths():
+    site_packages = Path(__file__).resolve().parent
+    paths = [
+        site_packages / "nvidia" / "cudnn" / "bin",
+        site_packages / "nvidia" / "cu13" / "bin" / "x86_64",
+        Path(r"$CudaPath") / "bin",
+    ]
+    for path in paths:
+        if path.exists():
+            path_text = str(path)
+            os.environ["PATH"] = path_text + os.pathsep + os.environ.get("PATH", "")
+            if hasattr(os, "add_dll_directory"):
+                os.add_dll_directory(path_text)
+
+
+_add_cuda_dll_paths()
+"@
+
+    $bootstrapCode | Set-Content -Encoding UTF8 -Path $bootstrapPath
+    "import _gpu_facial_recognition_cuda_paths" | Set-Content -Encoding ASCII -Path $pthPath
+}
+
 function Invoke-Checked {
     param(
         [string]$Executable,
@@ -132,7 +167,8 @@ if (-not $SkipDlibCudaBuild) {
 
 Write-Step "Verifying installation"
 $verifyScript = Join-Path $env:TEMP "verify_gpu_face_install.py"
-$sitePackages = & $python -c "import site; print([p for p in site.getsitepackages() if p.lower().endswith('site-packages')][0])"
+$sitePackages = Join-Path ([IO.FileInfo]$python).Directory.Parent.FullName "Lib\site-packages"
+Install-CudaDllBootstrap -SitePackages $sitePackages -CudaPath $env:CUDA_PATH
 $verifyCode = @"
 import os
 from pathlib import Path
